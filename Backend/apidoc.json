@@ -1,0 +1,17 @@
+{
+	"name": "todoServices",
+	"version": "0.1.0",
+	"description": "The backend mock for todo kata.",
+	"order": [
+		"AllTodos",
+        "Todo",
+		"AddTodo",
+		"UpdateTodo",
+		"RemoveTodo"
+	],
+	"title": "Todo Backend",
+	"template": {
+		"withCompare": true,
+		"withGenerator": true
+	}
+}
