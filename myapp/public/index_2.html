@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en" ng-app="todo">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Template • TodoMVC</title>
+
+    <!-- CSS overrides - remove if you don't need it -->
+    <link rel="stylesheet" href="stylesheets/base.css">
+    <link rel="stylesheet" href="stylesheets/index.css">
+    <link rel="stylesheet" href="stylesheets/app.css">
+
+
+</head>
+<body>
+<ui-view></ui-view>
+<script id="acts.tpl" type="text/ng-template">
+    <div>
+        <section class="todoapp">
+            <header class="header">
+                <h1>todos</h1>
+                <input class="new-todo" placeholder="What needs to be done?" autofocus
+                       ng-model='inp_val'
+                       ng-keyup="myKeyup($event)"
+                >
+            </header>
+            <!-- This section should be hidden by default and shown when there are todos -->
+            <section class="main">
+                <input class="toggle-all" type="checkbox" ng-click="top=!top" ng-init="top=true">
+                <ul class="todo-list" ng-if="top">
+                    <li ng-repeat="todo in todos_copy track by $index"
+                        ng-class="{ 'completed': todo.done, 'editing': todo.edit }">
+                        <div class="view">
+                            <input type="checkbox" ng-model="todo.done" class="toggle"
+                                   ng-change="change_check($index,todo)">
+                            <label ng-dblclick="db(todo)">{{todo.text}}</label>
+                            <button class="destroy" ng-click="delet($index,todo)"></button>
+                        </div>
+                        <input autofocus ng-blur="two($event,$index,todo)"
+                               ng-keyup="up($event,$index,todo)" class="edit" ng-model="todo.text">
+                    </li>
+                </ul>
+
+            </section>
+            <!-- This footer should hidden by default and shown when there are todos -->
+            <footer class="footer">
+                <!-- This should be `0 items left` by default -->
+                <span class="todo-count"><strong>something is counted</strong></span>
+                <!-- Remove this if you don't implement routing -->
+                <!-- These are here just to show the structure of the list items -->
+                <!-- List items should get the class `editing` when editing and `completed` when marked as completed -->
+                <ul class="filters">
+                    <li ng-repeat="act in acts" ng-click="slet($index)">
+                        <a ui-sref={{act.name}}
+                           ng-class="{ 'selected': act.ok }"
+                           ui-sref-active="selected">
+                            {{act.name}}
+                        </a>
+                    </li>
+                </ul>
+                <button class="clear-completed" ng-click="cancel()">Clear completed</button>
+            </footer>
+        </section>
+    </div>
+</script>
+<script src="/javascripts/angular.js"></script>
+<script src="/javascripts/angular-ui-router.js"></script>
+<script>
+    angular.module('todo', ['ui.router'])
+        .config(function ($stateProvider, $urlRouterProvider) {
+            $urlRouterProvider.otherwise('/');
+
+            var allState = {
+                name: 'all',
+                url: '/',
+                templateUrl: 'acts.tpl',
+                controller: 'TodoListCtrl'
+            };
+            var activeState = {
+                name: 'active',
+                url: '/active',
+                templateUrl: 'acts.tpl',
+                controller: 'TodoListCtrl'
+            };
+            var completedState = {
+                name: 'completed',
+                url: '/completed',
+                templateUrl: 'acts.tpl',
+                controller: 'TodoListCtrl'
+            };
+
+            $stateProvider.state(allState)
+                .state(activeState)
+                .state(completedState);
+        })
+        .service('todoService', function ($http, $filter) {
+            var me = this;
+            me.postInit = function () {
+                // filter(x => x.name)
+                return $http.post('/')
+                    .then(function (resp) {
+                        me.todos = r.data;
+                    });
+            };
+            me.post_init = function () {
+                return $http.post('/').then(function (r) {
+
+                    me.todos = r.data
+
+                }, function (e) {
+                    console.log('eeeeeeeeeeee' + e)
+                })
+            }
+            me.post_add = function (todo) {
+                return $http.post('/add', todo).then(function (r) {
+                    me.todos = r.data
+
+                    console.log(r.data)
+                }, function (e) {
+                    console.log(e + 'eeeeeeee')
+                })
+            };
+            me.post_destroy = function (i) {
+                return $http.post('/destroy', i).then(function (r) {
+                    me.todos = r.data
+
+
+                }, function (e) {
+                    console.log(e + 'eeeeeeee')
+                })
+            };
+            me.post_modify = function (i) {
+                return $http.post('/modify', i).then(function (r) {
+                    me.rodos = r.data
+
+                }, function (e) {
+
+                })
+            };
+        })
+        .controller('TodoListController', function ($scope, $filter, $state, todoService) {
+            $scope.user_get = htp;
+
+            htp.post_init()
+            /*这是每次实例化一次状态，todo源数据要从取localstorage里面取，因为每种状态会重新刷新一次todos初值*/
+
+
+            $scope.todos = htp.todos_data || [];
+
+            console.log($scope.todos);
+            /*每当实例化的时候，执行*/
+            this.$onInit = function () {
+                todoService.postInit();
+                $scope.todos = todoService.todos_data || [];
+                $scope.todos_copy = angular.fromJson(htp.todos)
+                var a = $scope.acts.find(function (item) {
+                    console.log(item.name);
+                    return item.name === $state.current.name
+                });
+                a.opt();
+                console.log(a)
+            };
+            /*wwwwwwwwwwwwwwwwatch!!!!!!!!!!!!!!!!!!监视每种状态下每次todos的改动*/
+            /* $scope.$watch(function () {
+             return $scope.todos
+             },function (n,o) {
+             if (n === o) {
+             return;
+             }
+             else {
+             $scope.todos = n;
+             console.log(n);
+             $scope.user_get.post(n);
+
+             /!*执行判断 然后执行a.opt函数 进行筛选*!/
+             $scope.judg_state()
+             }
+
+             },true);*/
+
+
+            /*这里是acts部分*/
+            $scope.acts = [
+                {
+                    name: 'all',
+                    opt: function () {
+                        htp.post_init().then(function () {
+                            console.log(htp.todos)
+                            $scope.todos_copy = htp.todos;
+                        })
+                    },
+                    count: function () {
+                    },
+                    path: '/'
+                },
+                {
+                    name: 'active',
+                    opt: function () {
+                        htp.post_init().then(function () {
+                            console.log(htp.todos)
+                            $scope.remainingCount = $filter('filter')(
+                                htp.todos, {done: false});
+                            $scope.todos_copy = $scope.remainingCount;
+                        })
+                    },
+                    count: function () {
+                        return $scope.todos.filter(function (p1) {
+                            return !p1.done
+                        }).length
+                    },
+                    path: '/active'
+                },
+                {
+                    name: 'completed',
+                    opt: function () {
+                        htp.post_init().then(function () {
+                            console.log(htp.todos)
+                            $scope.completedCount = $filter('filter')(htp.todos, {done: true});
+                            $scope.todos_copy = $scope.completedCount;
+                        })
+                    },
+                    count: function () {
+                        return $scope.todos.filter(function (p1) {
+                            if (p1.done) {
+                                return p1
+                            }
+                        }).length;
+                    },
+                    path: '/completed'
+                }
+            ];
+            /*判断是哪一种状态*/
+            $scope.judg_state = function () {
+                var a = $scope.acts.find(function (item) {
+                    console.log(item.name);
+                    return item.name === $state.current.name
+                });
+                a.opt();
+            };
+            /*判断是哪一种状态----end*/
+
+            /*按回车引用todo添加功能*/
+            $scope.myKeyup = function (e) {
+                //IE 编码包含在window.event.keyCode中，Firefox或Safari 包含在event.which中
+                var keycode = window.event ? e.keyCode : e.which;
+                if (keycode == 13) {
+
+                    $scope.addTodo();
+                }
+            };
+            /*这里是数组添加 push可以添加一个对象作为数组的一个元素*/
+            $scope.addTodo = function () {
+                if ($scope.inp_val) {
+                    $scope.todo = {
+                        text: $scope.inp_val,
+                        done: false
+                    };
+                    htp.post_add($scope.todo)
+                        .then(function () {
+                            $scope.judg_state();
+                        });
+                }
+                $scope.inp_val = '';
+
+            };
+
+            /*check改变*/
+
+            $scope.change_check = function (i, todo) {
+                var index = {index: i, todo: todo};
+                htp.post_modify(index_2).then(function () {
+
+                    $scope.judg_state()
+
+                })
+
+
+            };
+
+
+            /*这是在数组中删掉当前todo，这里的todo实际是个索引*/
+            $scope.delet = function (i) {
+                //在todos数组中将当前todo删去
+                var index = {index: i};
+                htp.post_destroy(index_2).then(function () {
+                    $scope.judg_state();
+                });
+                /*$scope.todos_copy= angular.fromJson(htp.todos)*/
+                console.log(index_2);
+            };
+
+
+            /*这里是统计整个数组里面done=false的数量，这里的done跟input用ng-model双向绑定*/
+            $scope.remain = function () {
+                var i = 0;
+                $scope.todos_copy.forEach(function (ele) {
+                    if (!ele.done) {
+                        i++
+                    }
+                });
+                return i;
+            };
+            /*双击事件----------------------------样式*/
+            $scope.db = function (todo) {
+
+                todo.edit = !todo.edit;
+
+                $scope.one = todo.text
+            };
+
+            /*这里是选中时改变筛选按钮的--------------样式*/
+            $scope.slet = function (index) {
+                $scope.acts.forEach(function (item, i) {
+                    item.ok = i === index_2;
+                });
+            };
+
+
+            /*取消完成状态 -------------------------样式*/
+            $scope.cancel = function () {
+                $scope.todos_copy.forEach(function (ele) {
+                    if (ele.done) {
+                        ele.done = false
+                    }
+                });
+
+            };
+
+            /*这是按键功能----------------------------------样式*/
+            $scope.up = function (e, index, todo) {
+                var keycode = window.event ? e.keyCode : e.which;
+                var todo = $scope.todos_copy[index_2];
+                if (keycode == 13) {
+                    console.log(13);
+                    $scope.todos_copy[index_2].edit = !$scope.todos_copy[index_2].edit;
+                }
+                if (keycode == 27) {
+                    $scope.todos_copy[index_2].edit = !$scope.todos_copy[index_2].edit;
+                    $scope.todos_copy[index_2].text = $scope.one;
+                    console.log($scope.one)
+                }
+
+            };
+
+        })
+    var todo = angular.module('todo', ['ui.router']);
+
+
+    /*http*/
+    todo.service('htp', ['$http', '$filter', function ($http, $filter) {
+
+
+    }]);
+    /*http-end*/
+
+
+    todo.controller('TodoListCtrl', ['$scope', '$filter', '$state', 'htp', function ($scope, $filter, $state, htp) {
+        $scope.user_get = htp;
+
+        htp.post_init()
+        /*这是每次实例化一次状态，todo源数据要从取localstorage里面取，因为每种状态会重新刷新一次todos初值*/
+
+
+        $scope.todos = htp.todos_data || [];
+
+        console.log($scope.todos);
+        /*每当实例化的时候，执行*/
+        this.$onInit = function () {
+
+            $scope.todos_copy = angular.fromJson(htp.todos)
+            var a = $scope.acts.find(function (item) {
+                console.log(item.name);
+                return item.name === $state.current.name
+            });
+            a.opt();
+            console.log(a)
+        };
+        /*wwwwwwwwwwwwwwwwatch!!!!!!!!!!!!!!!!!!监视每种状态下每次todos的改动*/
+        /* $scope.$watch(function () {
+         return $scope.todos
+         },function (n,o) {
+         if (n === o) {
+         return;
+         }
+         else {
+         $scope.todos = n;
+         console.log(n);
+         $scope.user_get.post(n);
+
+         /!*执行判断 然后执行a.opt函数 进行筛选*!/
+         $scope.judg_state()
+         }
+
+         },true);*/
+
+
+        /*这里是acts部分*/
+        $scope.acts = [
+            {
+                name: 'all',
+                opt: function () {
+                    htp.post_init().then(function () {
+                        console.log(htp.todos)
+                        $scope.todos_copy = htp.todos;
+                    })
+
+
+                },
+                count: function () {
+                },
+                path: '/'
+
+            },
+
+            {
+                name: 'active',
+                opt: function () {
+                    htp.post_init().then(function () {
+                        console.log(htp.todos)
+                        $scope.remainingCount = $filter('filter')(
+                            htp.todos, {done: false});
+                        $scope.todos_copy = $scope.remainingCount;
+                    })
+                },
+                count: function () {
+                    return $scope.todos.filter(function (p1) {
+                        return !p1.done
+                    }).length
+                },
+                path: '/active'
+            },
+
+            {
+                name: 'completed',
+                opt: function () {
+
+                    htp.post_init().then(function () {
+                        console.log(htp.todos)
+                        $scope.completedCount = $filter('filter')(
+                            htp.todos, {done: true});
+                        $scope.todos_copy = $scope.completedCount;
+
+
+                    })
+
+
+                },
+                count: function () {
+                    return $scope.todos.filter(function (p1) {
+                        if (p1.done) {
+                            return p1
+                        }
+                    }).length;
+                },
+                path: '/completed'
+            }
+
+        ];
+        /*判断是哪一种状态*/
+        $scope.judg_state = function () {
+            var a = $scope.acts.find(function (item) {
+                console.log(item.name);
+                return item.name === $state.current.name
+            });
+            a.opt();
+        };
+        /*判断是哪一种状态----end*/
+
+        /*按回车引用todo添加功能*/
+        $scope.myKeyup = function (e) {
+            //IE 编码包含在window.event.keyCode中，Firefox或Safari 包含在event.which中
+            var keycode = window.event ? e.keyCode : e.which;
+            if (keycode == 13) {
+
+                $scope.addTodo();
+            }
+        };
+        /*这里是数组添加 push可以添加一个对象作为数组的一个元素*/
+        $scope.addTodo = function () {
+            if ($scope.inp_val) {
+                $scope.todo = {
+                    text: $scope.inp_val,
+                    done: false
+                }
+                htp.post_add($scope.todo).then(
+                    function () {
+                        $scope.judg_state()
+                    }
+                )
+
+
+            }
+            $scope.inp_val = ''
+
+        };
+
+        /*check改变*/
+
+        $scope.change_check = function (i, todo) {
+            var index = {index: i, todo: todo};
+            htp.post_modify(index_2).then(function () {
+
+                $scope.judg_state()
+
+            })
+
+
+        }
+
+
+        /*这是在数组中删掉当前todo，这里的todo实际是个索引*/
+        $scope.delet = function (i) {
+            //在todos数组中将当前todo删去
+            var index = {index: i}
+            htp.post_destroy(index_2).then(function () {
+
+                $scope.judg_state()
+            });
+
+            /*$scope.todos_copy= angular.fromJson(htp.todos)*/
+            console.log(index_2)
+
+        }
+
+
+        /*这里是统计整个数组里面done=false的数量，这里的done跟input用ng-model双向绑定*/
+        $scope.remain = function () {
+            var i = 0;
+            $scope.todos_copy.forEach(function (ele) {
+                if (!ele.done) {
+                    i++
+                }
+            });
+            return i;
+        };
+        /*双击事件----------------------------样式*/
+        $scope.db = function (todo) {
+
+            todo.edit = !todo.edit;
+
+            $scope.one = todo.text
+        };
+
+        /*这里是选中时改变筛选按钮的--------------样式*/
+        $scope.slet = function (index) {
+            $scope.acts.forEach(function (item, i) {
+                item.ok = i === index_2;
+            });
+        };
+
+
+        /*取消完成状态 -------------------------样式*/
+        $scope.cancel = function () {
+            $scope.todos_copy.forEach(function (ele) {
+                if (ele.done) {
+                    ele.done = false
+                }
+            });
+
+        };
+
+        /*这是按键功能----------------------------------样式*/
+        $scope.up = function (e, index, todo) {
+            var keycode = window.event ? e.keyCode : e.which;
+            if (keycode == 13) {
+                console.log(13);
+                $scope.todos_copy[index_2].edit = !$scope.todos_copy[index_2].edit;
+            }
+            if (keycode == 27) {
+                $scope.todos_copy[index_2].edit = !$scope.todos_copy[index_2].edit;
+                $scope.todos_copy[index_2].text = $scope.one;
+                console.log($scope.one)
+            }
+
+        };
+
+    }]);
+
+
+</script>
+
+
+</body>
+</html>
